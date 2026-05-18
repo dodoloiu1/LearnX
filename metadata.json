@@ -1,0 +1,6 @@
+{
+  "name": "LEARNX: Lecții Transformate",
+  "description": "Transformă transcrierile brute ale cursurilor în materiale didactice structurate folosind AI, fără completări automate ale conținutului.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
