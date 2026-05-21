@@ -105,6 +105,10 @@ function formatHistoryDate(date: string): string {
   }).format(new Date(date));
 }
 
+function getAuthRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
 export default function App() {
   const [transcription, setTranscription] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -222,7 +226,7 @@ export default function App() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: getAuthRedirectUrl(),
       },
     });
     if (signInError) setError(signInError.message);

@@ -27,5 +27,8 @@ LEARNX transforma transcrieri brute sau fisiere audio/video in materiale de stud
 - The Supabase publishable/anon key is public browser config. The app includes it as a fallback in `src/supabaseClient.ts` so login works from GitHub builds too.
 - Keep RLS policies enabled in Supabase. The browser key must never bypass row-level security.
 - On Vercel/Netlify/Render/etc., you may still add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables if you want to override the fallback.
+- In Supabase Dashboard, open Authentication > URL Configuration and set `Site URL` to the deployed public app URL, not `http://localhost:3000`.
+- Add both the deployed URL and `http://localhost:3000` to `Redirect URLs` if you want Google login to work in production and locally. For GitHub Pages, include the repository path, for example `https://username.github.io/repository-name/`.
+- In Google Cloud OAuth settings, the authorized redirect URI should be Supabase's callback URL: `https://dlehdgvheztziiwurdtl.supabase.co/auth/v1/callback`.
 - Do not put a real `GEMINI_API_KEY` in GitHub. Users should add their Gemini key inside the app, or you can configure it privately in the hosting provider.
 - If Gemini returns 503/UNAVAILABLE because of high demand, the backend retries and then falls back through `GEMINI_MODEL_CHAIN`.
