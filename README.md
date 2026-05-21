@@ -8,17 +8,9 @@ LEARNX transforma transcrieri brute sau fisiere audio/video in materiale de stud
 
 1. Install dependencies:
    `npm install`
-<<<<<<< HEAD
-2. Set `GEMINI_API_KEY` in `.env` or `.env.local`
-3. Run the app:
-   `npm run dev`
-4. Build and run production:
-   `npm run build`
-   `npm run start`
-=======
-2. Create `.env` locally with:
+2. Optional: create `.env` locally if you want to override the checked-in public Supabase config or set a private server Gemini fallback:
    `VITE_SUPABASE_URL="https://dlehdgvheztziiwurdtl.supabase.co"`
-   `VITE_SUPABASE_ANON_KEY="your_supabase_publishable_key"`
+   `VITE_SUPABASE_ANON_KEY="sb_publishable_..."`
    `GEMINI_API_KEY=""`
    `GEMINI_MODEL_CHAIN="gemini-3.5-flash,gemini-2.5-flash,gemini-2.5-flash-lite"`
 3. `GEMINI_API_KEY` is optional if users save their own Gemini API key after Google login.
@@ -32,8 +24,8 @@ LEARNX transforma transcrieri brute sau fisiere audio/video in materiale de stud
 ## GitHub / Deploy
 
 - Do not commit `.env`; it is ignored by `.gitignore`.
-- The Supabase publishable/anon key is safe to expose in frontend apps, but RLS policies must stay enabled.
-- On Vercel/Netlify/Render/etc., add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables.
+- The Supabase publishable/anon key is public browser config. The app includes it as a fallback in `src/supabaseClient.ts` so login works from GitHub builds too.
+- Keep RLS policies enabled in Supabase. The browser key must never bypass row-level security.
+- On Vercel/Netlify/Render/etc., you may still add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables if you want to override the fallback.
 - Do not put a real `GEMINI_API_KEY` in GitHub. Users should add their Gemini key inside the app, or you can configure it privately in the hosting provider.
 - If Gemini returns 503/UNAVAILABLE because of high demand, the backend retries and then falls back through `GEMINI_MODEL_CHAIN`.
->>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
