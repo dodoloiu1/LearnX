@@ -12,7 +12,13 @@ import {
   LogIn,
   LogOut,
   Trash2,
+<<<<<<< HEAD
   UserCircle
+=======
+  UserCircle,
+  KeyRound,
+  Save
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -106,6 +112,13 @@ export default function App() {
   const [history, setHistory] = useState<LessonHistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+<<<<<<< HEAD
+=======
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [isApiKeyLoading, setIsApiKeyLoading] = useState(false);
+  const [isApiKeySaving, setIsApiKeySaving] = useState(false);
+  const [apiKeySavedAt, setApiKeySavedAt] = useState<string | null>(null);
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
@@ -137,6 +150,32 @@ export default function App() {
     setIsHistoryLoading(false);
   };
 
+<<<<<<< HEAD
+=======
+  const loadUserSettings = async (activeUser = user) => {
+    if (!supabase || !activeUser) {
+      setGeminiApiKey("");
+      setApiKeySavedAt(null);
+      return;
+    }
+
+    setIsApiKeyLoading(true);
+    const { data, error: settingsError } = await supabase
+      .from("user_settings")
+      .select("gemini_api_key,updated_at")
+      .eq("user_id", activeUser.id)
+      .maybeSingle();
+
+    if (settingsError) {
+      setError(settingsError.message);
+    } else {
+      setGeminiApiKey(data?.gemini_api_key ?? "");
+      setApiKeySavedAt(data?.updated_at ?? null);
+    }
+    setIsApiKeyLoading(false);
+  };
+
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
   useEffect(() => {
     if (!supabase) {
       setIsAuthLoading(false);
@@ -147,7 +186,14 @@ export default function App() {
       const activeUser = data.session?.user ?? null;
       setUser(activeUser);
       setIsAuthLoading(false);
+<<<<<<< HEAD
       if (activeUser) void loadHistory(activeUser);
+=======
+      if (activeUser) {
+        void loadHistory(activeUser);
+        void loadUserSettings(activeUser);
+      }
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -156,8 +202,16 @@ export default function App() {
       setSelectedHistoryId(null);
       if (activeUser) {
         void loadHistory(activeUser);
+<<<<<<< HEAD
       } else {
         setHistory([]);
+=======
+        void loadUserSettings(activeUser);
+      } else {
+        setHistory([]);
+        setGeminiApiKey("");
+        setApiKeySavedAt(null);
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
       }
     });
 
@@ -185,6 +239,46 @@ export default function App() {
     setUser(null);
     setHistory([]);
     setSelectedHistoryId(null);
+<<<<<<< HEAD
+=======
+    setGeminiApiKey("");
+    setApiKeySavedAt(null);
+  };
+
+  const saveGeminiApiKey = async () => {
+    if (!supabase || !user) {
+      setError("Autentifica-te cu Google pentru a salva API key-ul intre sesiuni.");
+      return;
+    }
+
+    const trimmedApiKey = geminiApiKey.trim();
+    if (!trimmedApiKey) {
+      setError("Introdu un Gemini API key valid inainte de salvare.");
+      return;
+    }
+
+    setIsApiKeySaving(true);
+    const { data, error: saveError } = await supabase
+      .from("user_settings")
+      .upsert(
+        {
+          user_id: user.id,
+          gemini_api_key: trimmedApiKey,
+        },
+        { onConflict: "user_id" }
+      )
+      .select("updated_at")
+      .single();
+
+    if (saveError) {
+      setError(saveError.message);
+    } else {
+      setGeminiApiKey(trimmedApiKey);
+      setApiKeySavedAt(data?.updated_at ?? new Date().toISOString());
+      setError(null);
+    }
+    setIsApiKeySaving(false);
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
   };
 
   const saveHistoryItem = async (sourceType: SourceType, nextTranscription: string, nextMaterial: string) => {
@@ -295,6 +389,10 @@ export default function App() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("language", language);
+<<<<<<< HEAD
+=======
+    formData.append("apiKey", geminiApiKey.trim());
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
 
     try {
       const response = await fetch('/api/upload-and-process', {
@@ -360,7 +458,11 @@ export default function App() {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+<<<<<<< HEAD
         body: JSON.stringify({ transcription, language }),
+=======
+        body: JSON.stringify({ transcription, language, apiKey: geminiApiKey.trim() }),
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
       });
 
       const contentType = response.headers.get("content-type");
@@ -499,12 +601,56 @@ export default function App() {
           </div>
           <div className="pt-8 px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Configurare</div>
           <div className="px-4 py-2 flex flex-col gap-2">
+<<<<<<< HEAD
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-500">Gemini API</span>
               <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
             </div>
             <div className="text-[10px] bg-slate-100 p-2 rounded font-mono text-slate-400 truncate">
               Service activ pe Server
+=======
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-700">
+                <KeyRound className="h-4 w-4 text-orange-500" />
+                API key personal
+              </div>
+              <input
+                type="password"
+                value={geminiApiKey}
+                onChange={(e) => {
+                  setGeminiApiKey(e.target.value);
+                  setApiKeySavedAt(null);
+                }}
+                disabled={isApiKeyLoading}
+                placeholder="Gemini API key"
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-mono text-slate-700 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 disabled:opacity-50"
+              />
+              <button
+                onClick={saveGeminiApiKey}
+                disabled={!user || isApiKeySaving || isApiKeyLoading || !geminiApiKey.trim()}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                {isApiKeySaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Salveaza cheia
+              </button>
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+                {user
+                  ? apiKeySavedAt
+                    ? "Cheia este salvata pentru sesiunile viitoare."
+                    : "Cheia introdusa va fi folosita la generare."
+                  : "Login necesar pentru salvare in baza de date."}
+              </p>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">Gemini API</span>
+              <span className={cn(
+                "h-2 w-2 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]",
+                geminiApiKey.trim() ? "bg-green-500 animate-pulse" : "bg-amber-400"
+              )}></span>
+            </div>
+            <div className="text-[10px] bg-slate-100 p-2 rounded font-mono text-slate-400 truncate">
+              {geminiApiKey.trim() ? "Cheie utilizator activa" : "Fallback server .env"}
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
             </div>
           </div>
         </nav>

@@ -35,9 +35,18 @@ const upload = multer({
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
+<<<<<<< HEAD
 let ai: any = null;
 
 function getGeminiApiKey(): string {
+=======
+function getGeminiApiKey(apiKeyOverride?: unknown): string {
+  const providedApiKey = typeof apiKeyOverride === "string" ? apiKeyOverride.trim() : "";
+  if (providedApiKey) {
+    return providedApiKey;
+  }
+
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
   // Vite HMR poate reîncărca frontend-ul fără să repornească Express — re-citim .env la nevoie
   if (!process.env.GEMINI_API_KEY?.trim()) {
     loadEnvFiles();
@@ -52,6 +61,7 @@ function getGeminiApiKey(): string {
   return apiKey;
 }
 
+<<<<<<< HEAD
 function getAI() {
   if (!ai) {
     const apiKey = getGeminiApiKey();
@@ -65,6 +75,18 @@ function getAI() {
     });
   }
   return ai;
+=======
+function getAI(apiKeyOverride?: unknown) {
+  const apiKey = getGeminiApiKey(apiKeyOverride);
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
 }
 
 // Health check / Test endpoint
@@ -89,7 +111,24 @@ app.use((req, res, next) => {
 
 type AppLanguage = "ro" | "en";
 
+<<<<<<< HEAD
 const MODEL_ID = "gemini-3-flash-preview";
+=======
+const DEFAULT_GEMINI_MODELS = [
+  "gemini-3.5-flash",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+];
+
+function getGeminiModelChain(): string[] {
+  const configured = process.env.GEMINI_MODEL_CHAIN
+    ?.split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+  const models = configured?.length ? configured : DEFAULT_GEMINI_MODELS;
+  return [...new Set(models)];
+}
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
 
 function normalizeLanguage(lang: unknown): AppLanguage {
   return lang === "en" ? "en" : "ro";
@@ -186,17 +225,48 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+<<<<<<< HEAD
 function isRetryableGeminiError(error: any): boolean {
   const message = String(error?.message || error || "").toLowerCase();
   const status = Number(error?.status || error?.code || 0);
+=======
+function getGeminiErrorInfo(error: any) {
+  const nested = error?.error ?? {};
+  const message = String(error?.message || nested?.message || error || "").toLowerCase();
+  const statusText = String(error?.status || nested?.status || "").toUpperCase();
+  const code = Number(error?.code || error?.status || nested?.code || 0);
+  return { message, statusText, code };
+}
+
+function isRetryableGeminiError(error: any): boolean {
+  const { message, code, statusText } = getGeminiErrorInfo(error);
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
   return (
     message.includes("fetch failed") ||
     message.includes("socket") ||
     message.includes("timeout") ||
     message.includes("econnreset") ||
+<<<<<<< HEAD
     status === 408 ||
     status === 429 ||
     status >= 500
+=======
+    statusText === "UNAVAILABLE" ||
+    code === 408 ||
+    code === 429 ||
+    code >= 500
+  );
+}
+
+function isGeminiCapacityError(error: any): boolean {
+  const { message, code, statusText } = getGeminiErrorInfo(error);
+  return (
+    code === 503 ||
+    statusText === "UNAVAILABLE" ||
+    message.includes("high demand") ||
+    message.includes("overloaded") ||
+    message.includes("temporarily unavailable")
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
   );
 }
 
@@ -208,7 +278,11 @@ async function withGeminiRetry<T>(label: string, action: () => Promise<T>): Prom
     } catch (error: any) {
       lastError = error;
       if (!isRetryableGeminiError(error) || attempt === 3) break;
+<<<<<<< HEAD
       const waitMs = attempt * 2500;
+=======
+      const waitMs = attempt * 2500 + Math.round(Math.random() * 1000);
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
       console.warn(`${label} failed on attempt ${attempt}; retrying in ${waitMs}ms:`, error?.message || error);
       await sleep(waitMs);
     }
@@ -223,6 +297,36 @@ async function withGeminiRetry<T>(label: string, action: () => Promise<T>): Prom
   throw lastError;
 }
 
+<<<<<<< HEAD
+=======
+async function withGeminiModelFallback<T>(
+  label: string,
+  action: (model: string) => Promise<T>
+): Promise<T> {
+  const models = getGeminiModelChain();
+  let lastError: any;
+
+  for (const [index, model] of models.entries()) {
+    try {
+      return await withGeminiRetry(`${label} (${model})`, () => action(model));
+    } catch (error: any) {
+      lastError = error;
+      const canFallback = isGeminiCapacityError(error) && index < models.length - 1;
+      if (!canFallback) break;
+      console.warn(`${label}: ${model} is temporarily unavailable; falling back to ${models[index + 1]}.`);
+    }
+  }
+
+  if (isGeminiCapacityError(lastError)) {
+    throw new Error(
+      "Modelul Gemini este temporar suprasolicitat. Am incercat automat modelele fallback, dar toate sunt indisponibile momentan. Incearca din nou in cateva minute sau seteaza GEMINI_MODEL_CHAIN cu alte modele disponibile."
+    );
+  }
+
+  throw lastError;
+}
+
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
 async function generateMaterialFromTranscription(
   client: ReturnType<typeof getAI>,
   transcription: string,
@@ -233,9 +337,15 @@ async function generateMaterialFromTranscription(
       ? `Here is the transcription:\n${transcription}`
       : `Iată transcrierea:\n${transcription}`;
 
+<<<<<<< HEAD
   const response: any = await withGeminiRetry("Material generation", () =>
     client.models.generateContent({
       model: MODEL_ID,
+=======
+  const response: any = await withGeminiModelFallback("Material generation", (model) =>
+    client.models.generateContent({
+      model,
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
       contents: [{ text: buildSystemPrompt(language) }, { text: intro }],
     })
   );
@@ -246,14 +356,22 @@ async function generateMaterialFromTranscription(
 // Existing text-based generation
 app.post("/api/generate", async (req, res) => {
   try {
+<<<<<<< HEAD
     const { transcription, language: rawLang } = req.body;
+=======
+    const { transcription, language: rawLang, apiKey } = req.body;
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
     const language = normalizeLanguage(rawLang);
     console.log("Generating material for transcription text length:", transcription?.length);
     if (!transcription) {
       return res.status(400).json({ error: "Transcription is required" });
     }
 
+<<<<<<< HEAD
     const client = getAI();
+=======
+    const client = getAI(apiKey);
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
     const result = await generateMaterialFromTranscription(client, transcription, language);
 
     res.json({ result });
@@ -273,7 +391,11 @@ app.post("/api/upload-and-process", upload.single("file"), async (req, res) => {
   }
 
   try {
+<<<<<<< HEAD
     const client = getAI();
+=======
+    const client = getAI(req.body?.apiKey);
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
 
     const mimeType = req.file?.mimetype || "application/octet-stream";
     const absolutePath = path.resolve(filePath);
@@ -325,9 +447,15 @@ app.post("/api/upload-and-process", upload.single("file"), async (req, res) => {
     const language = normalizeLanguage(req.body?.language);
 
     console.log("File is ready. Transcribing audio...");
+<<<<<<< HEAD
     const transcribeResponse: any = await withGeminiRetry("Media transcription", () =>
       client.models.generateContent({
         model: MODEL_ID,
+=======
+    const transcribeResponse: any = await withGeminiModelFallback("Media transcription", (model) =>
+      client.models.generateContent({
+        model,
+>>>>>>> 7e46872 (API KEY IMPLEMENTAT + FALLBACK DACA DA EROARE GEMINI)
         contents: [
           buildTranscriptionPrompt(language),
           createPartFromUri(file.uri, file.mimeType || mimeType),
