@@ -30,7 +30,7 @@ const upload = multer({
           cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
         },
       }),
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  limits: { fileSize: process.env.VERCEL ? 4 * 1024 * 1024 : 100 * 1024 * 1024 },
 });
 
 // Configure Express
@@ -422,6 +422,9 @@ app.post("/api/upload-and-process", upload.single("file"), async (req, res) => {
 // Final error handler
 app.use((err: any, req: any, res: any, next: any) => {
   console.error("Express Error Handler:", err);
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "Fisierul este prea mare pentru upload." });
+  }
   res.status(500).json({ error: err.message || "Unexpected server error" });
 });
 
