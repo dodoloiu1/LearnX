@@ -21,13 +21,15 @@ const HMR_PORT = Number(process.env.VITE_HMR_PORT) || 24679;
 
 // Setup multer for temporary file storage (păstrează extensia pentru MIME)
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: "uploads/",
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname) || "";
-      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-    },
-  }),
+  storage: process.env.VERCEL
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: "uploads/",
+        filename: (_req, file, cb) => {
+          const ext = path.extname(file.originalname) || "";
+          cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+        },
+      }),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
 });
 
@@ -77,7 +79,7 @@ app.get("/favicon.ico", (_req, res) => {
 });
 
 // Ensure uploads directory exists
-if (!fs.existsSync("uploads")) {
+if (!process.env.VERCEL && !fs.existsSync("uploads")) {
   fs.mkdirSync("uploads");
 }
 
@@ -324,24 +326,25 @@ app.post("/api/generate", async (req, res) => {
 
 // New video/audio-based generation
 app.post("/api/upload-and-process", upload.single("file"), async (req, res) => {
-  const filePath = req.file?.path;
+  const uploadedFile = req.file as Express.Multer.File | undefined;
+  const filePath = uploadedFile?.path;
   console.log("Received upload request:", req.file?.originalname, "Type:", req.file?.mimetype);
   
-  if (!filePath) {
+  if (!uploadedFile) {
     return res.status(400).json({ error: "No file uploaded" });
   }
 
   try {
     const client = getAI(req.body?.apiKey);
 
-    const mimeType = req.file?.mimetype || "application/octet-stream";
-    const absolutePath = path.resolve(filePath);
+    const mimeType = uploadedFile.mimetype || "application/octet-stream";
+    const absolutePath = filePath ? path.resolve(filePath) : "";
 
-    if (!fs.existsSync(absolutePath)) {
+    if (!uploadedFile.buffer && (!absolutePath || !fs.existsSync(absolutePath))) {
       throw new Error("Fișierul încărcat nu a fost găsit pe disc.");
     }
 
-    const fileBytes = fs.readFileSync(absolutePath);
+    const fileBytes = uploadedFile.buffer ?? fs.readFileSync(absolutePath);
     const uploadPayload = new Blob([fileBytes], { type: mimeType });
 
     console.log(
@@ -352,7 +355,7 @@ app.post("/api/upload-and-process", upload.single("file"), async (req, res) => {
         file: uploadPayload,
         config: {
           mimeType,
-          displayName: req.file?.originalname,
+          displayName: uploadedFile.originalname,
         },
       })
     );
@@ -402,7 +405,7 @@ app.post("/api/upload-and-process", upload.single("file"), async (req, res) => {
     const result = await generateMaterialFromTranscription(client, transcription, language);
 
     // Clean up
-    if (fs.existsSync(filePath)) {
+    if (filePath && fs.existsSync(filePath)) {
       try { fs.unlinkSync(filePath); } catch(e) {}
     }
     
@@ -448,4 +451,8 @@ async function startServer() {
   });
 }
 
-startServer();
+export default app;
+
+if (!process.env.VERCEL) {
+  startServer();
+}
