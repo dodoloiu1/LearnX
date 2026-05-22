@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, createPartFromUri, FileState } from "@google/genai/node";
 import dotenv from "dotenv";
 import multer from "multer";
@@ -431,6 +430,7 @@ app.use((err: any, req: any, res: any, next: any) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
